@@ -1,104 +1,49 @@
-import time
-
 from Agent import Agent, AgentGreedy
 from WarehouseEnv import WarehouseEnv, manhattan_distance
 from func_timeout import func_timeout, FunctionTimedOut
 import random
+import time
 
 
-# TODO: section a : 3
 def smart_heuristic(env: WarehouseEnv, robot_id: int):
     robot = env.get_robot(robot_id)
-    h_val = 0
-    needs_charging = False
     opponent = env.get_robot((robot_id + 1) % 2)
-    credit_difference = robot.credit - opponent.credit
-    h_val += credit_difference * 10  # was 8
-    closest_station_dist = float('inf')
-    for station in env.charge_stations:
-        dist = manhattan_distance(robot.position, station.position)
-        if dist < closest_station_dist:
-            closest_station_dist = dist
-    if robot.battery <= 2:
-        needs_charging = True
-        h_val -= closest_station_dist * 2
 
-    if robot.package != None:
-        if robot.battery >= manhattan_distance(robot.position,robot.package.destination):
-            h_val += 30 - manhattan_distance(robot.position,robot.package.destination)*2
-        else:
-            h_val -= manhattan_distance(robot.position,robot.package.destination)
+    credit_diff = robot.credit - opponent.credit
+    h_val = credit_diff * 30
+
+    needs_charge = False
+
+    dist_to_stations = [manhattan_distance(robot.position, s.position) for s in env.charge_stations]
+    closest_station_dist = min(dist_to_stations)
+
+    if robot.package is not None:
+        dist_to_dest = manhattan_distance(robot.position, robot.package.destination)
+
+        h_val += 100 / (dist_to_dest + 1)
+
+        if robot.battery < dist_to_dest:
+            needs_charge = True
+            h_val -= (closest_station_dist * 15)
     else:
         available_packages = [pkg for pkg in env.packages if pkg.on_board]
+
         closest_package_dist = float('inf')
         for pkg in available_packages:
-            dist = manhattan_distance(robot.position, pkg.position)
-            if dist < closest_package_dist:
-                closest_package_dist = dist
+            dist_to_pkg = manhattan_distance(robot.position, pkg.position)
+            if dist_to_pkg < closest_package_dist:
+                closest_package_dist = dist_to_pkg
 
-        if robot.battery < closest_package_dist:
-            needs_charging = True
-            h_val -= closest_station_dist
+        if robot.battery > closest_package_dist:
+            h_val += 10 / (closest_package_dist + 1)
         else:
-            h_val += 12 - closest_package_dist
-    if needs_charging and closest_station_dist <= 1:
-        h_val += 8
+            needs_charge = True
+            h_val -= (closest_station_dist * 15)
+
+    if closest_station_dist == 0 and needs_charge:
+        h_val *= 10
 
     return h_val
-#
-# def smart_heuristic(env: WarehouseEnv, robot_id: int):
-#     robot = env.get_robot(robot_id)
-#     opponent = env.get_robot((robot_id + 1) % 2)
-#
-#     score = 0
-#
-#     credit_difference = robot.credit - opponent.credit
-#     score += credit_difference * 10  # was 8
-#
-#     battery_level = robot.battery
-#     needs_charge = False
-#     closest_station_dist = float('inf')
-#     for station in env.charge_stations:
-#         dist = manhattan_distance(robot.position, station.position)
-#         if dist < closest_station_dist:
-#             closest_station_dist = dist
-#
-#     if battery_level <= 2:
-#         needs_charge = True
-#         score -= closest_station_dist * 2
-#
-#     if robot.package is not None:
-#         delivery_distance = manhattan_distance(robot.position, robot.package.destination)
-#         if battery_level < delivery_distance:
-#             score -= delivery_distance * 2
-#         else:
-#             score += 30  # was 20
-#             score -= delivery_distance
-#     else:
-#         available_packages = [pkg for pkg in env.packages if pkg.on_board]
-#         closest_package_dist = float('inf')
-#         for pkg in available_packages:
-#             dist = manhattan_distance(robot.position, pkg.position)
-#             if dist < closest_package_dist:
-#                 closest_package_dist = dist
-#
-#         if closest_package_dist < float('inf'):
-#             if battery_level < closest_package_dist:
-#                 needs_charge = True
-#                 score -= closest_station_dist
-#             else:
-#                 score += 12  # was 10
-#                 score -= closest_package_dist
-#
-#     if needs_charge and closest_station_dist <= 1:
-#         score += 8  # was 5
-#
-#     # Tie-breaking randomness
-#     score += random.uniform(-0.5, 0.5)
-#
-#     return score
-
-
 
 
 class AgentGreedyImproved(AgentGreedy):
@@ -119,6 +64,8 @@ class AgentMinimax(Agent):
                 current_depth += 1
             except FunctionTimedOut:
                 break
+        if best_op is None:
+            return 'park'
         return best_op
     def minimax(self, env, robot_id, opponent_id, depth, isMax):
         if depth == 0 or env.done():
@@ -164,6 +111,8 @@ class AgentAlphaBeta(Agent):
                 current_depth += 1
             except FunctionTimedOut:
                 break
+        if best_op is None:
+            return 'park'
         return best_op
 
     def minimax(self, env, robot_id, opponent_id, depth, isMax, alpha, beta):
@@ -218,6 +167,8 @@ class AgentExpectimax(Agent):
                 current_depth += 1
             except FunctionTimedOut:
                 break
+        if best_op is None:
+            return 'park'
         return best_op
 
     def expectimax(self, env, robot_id, opponent_id, depth, isMax):
