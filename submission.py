@@ -55,20 +55,18 @@ class AgentMinimax(Agent):
     # TODO: section b : 4
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
         opponent_id = (agent_id + 1) % 2
-        deadline = time.time() + time_limit - 0.25
+        deadline = time.time() + time_limit - 0.2
         best_op = None
         current_depth = 1
-        while time.time() < deadline:
+        while time.time() < deadline and current_depth <= 7:
             try:
                 best_op, val = func_timeout(deadline - time.time(), self.minimax, args=(env, agent_id, opponent_id, current_depth, True))
                 current_depth += 1
             except FunctionTimedOut:
                 break
-        if best_op is None:
-            return 'park'
         return best_op
     def minimax(self, env, robot_id, opponent_id, depth, isMax):
-        if depth == 0 or env.done():
+        if depth == 0:
             return None, smart_heuristic(env, robot_id)
         if isMax:
             return self.maximizer(env, robot_id, opponent_id, depth)
@@ -102,21 +100,19 @@ class AgentAlphaBeta(Agent):
     # TODO: section c : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
         opponent_id = (agent_id + 1) % 2
-        deadline = time.time() + time_limit - 0.25
+        deadline = time.time() + time_limit - 0.2
         best_op = None
         current_depth = 1
-        while time.time() < deadline:
+        while time.time() < deadline and current_depth <= 7:
             try:
                 best_op, val = func_timeout(deadline - time.time(), self.minimax, args=(env, agent_id, opponent_id, current_depth, True, float('-inf'), float('inf')))
                 current_depth += 1
             except FunctionTimedOut:
                 break
-        if best_op is None:
-            return 'park'
         return best_op
 
     def minimax(self, env, robot_id, opponent_id, depth, isMax, alpha, beta):
-        if depth == 0 or env.done():
+        if depth == 0:
             return None, smart_heuristic(env, robot_id)
         if isMax:
             return self.maximizer(env, robot_id, opponent_id, depth, alpha, beta)
@@ -158,21 +154,19 @@ class AgentExpectimax(Agent):
     # TODO: section d : 3
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
         opponent_id = (agent_id + 1) % 2
-        deadline = time.time() + time_limit - 0.25
+        deadline = time.time() + time_limit - 0.2
         best_op = None
         current_depth = 1
-        while time.time() < deadline:
+        while time.time() < deadline and current_depth <= 7:
             try:
                 best_op, val = func_timeout(deadline - time.time(), self.expectimax, args=(env, agent_id, opponent_id, current_depth, True))
                 current_depth += 1
             except FunctionTimedOut:
                 break
-        if best_op is None:
-            return 'park'
         return best_op
 
     def expectimax(self, env, robot_id, opponent_id, depth, isMax):
-        if depth == 0 or env.done():
+        if depth == 0:
             return None, smart_heuristic(env, robot_id)
         if isMax:
             return self.maximizer(env, robot_id, opponent_id, depth)
@@ -227,3 +221,5 @@ class AgentHardCoded(Agent):
         operators, _ = self.successors(env, robot_id)
 
         return random.choice(operators)
+
+
